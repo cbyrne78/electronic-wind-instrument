@@ -1,102 +1,63 @@
 # Electronic Wind Instrument (EWI)
 
-Final-year TU Dublin engineering project: a low-cost embedded electronic wind instrument built around an ESP32.
+Final-year TU Dublin project built in the **Arduino IDE** using an ESP32.
 
-![Finished EWI prototype](docs/images/ewi_finished.jpg)
+![Finished prototype](docs/images/ewi_finished.jpg)
 
-## Overview
+## What it does
 
-The instrument converts breath pressure and key inputs into real-time audio. The final prototype integrates:
+The instrument uses breath pressure and button inputs to control real-time audio. The final build used:
 
-- ESP32 microcontroller
-- HX710B 24-bit ADC + pressure sensor for breath input
-- 6 main fingering keys + 5 modifier/control buttons
-- Direct Digital Synthesis (DDS) with additive synthesis
-- ESP32 internal 8-bit DAC
-- PAM8403 Class-D amplifier and speaker
-- Custom 3D-printed enclosure and moisture-management system
+- ESP32
+- HX710B 24-bit ADC and pressure sensor
+- 6 main keys and 5 modifier/control buttons
+- ESP32 internal DAC
+- PAM8403 amplifier and speaker
+- custom 3D-printed enclosure and moisture trap
 
 The project received an **A1**.
 
-## System architecture
+## Hardware
 
 ```mermaid
 flowchart LR
-    B[Breath pressure] --> H[HX710B ADC]
+    B[Breath sensor] --> H[HX710B]
     H --> E[ESP32]
-    K[11 key inputs] --> E
-    E --> D[DDS + additive synthesis]
-    D --> F[Filtering / envelope]
-    F --> DAC[ESP32 DAC]
-    DAC --> A[PAM8403 amplifier]
+    K[Key inputs] --> E
+    E --> D[DDS / additive synthesis]
+    D --> DAC[ESP32 DAC]
+    DAC --> A[PAM8403]
     A --> S[Speaker]
 ```
 
-## Prototype and mechanical design
-
-The enclosure and mouthpiece were modelled in Fusion 360 and 3D printed for the final prototype.
-
-| Prototype interior | CAD enclosure |
+| Inside the prototype | CAD model |
 |---|---|
 | ![Internal electronics](docs/images/ewi_internal.jpg) | ![CAD enclosure](docs/images/ewi_cad.jpg) |
 
-A separate moisture-management insert was added after condensation repeatedly affected the pressure-sensing system.
+The original Fusion 360 files are in `hardware/3d/`:
 
-![Moisture trap CAD](docs/images/moisture_trap.jpg)
+- `Ewi_Enclosure.f3z`
+- `ewi_mouthpiece.f3d`
+- `Moisture_Trap_1.f3d`
 
-Original CAD files are included under `hardware/3d/`:
+![Moisture trap](docs/images/moisture_trap.jpg)
 
-- `Ewi_Enclosure.f3z` — Fusion 360 enclosure archive
-- `ewi_mouthpiece.f3d` — mouthpiece model
-- `Moisture_Trap_1.f3d` — moisture-management insert
+## Firmware
 
-## Embedded firmware
+The Arduino sketch handles key scanning, button debouncing, breath sensing and audio generation. Audio runs at about **22.05 kHz** using DDS with a fundamental plus second and third harmonics.
 
-The final Arduino firmware performs two main tasks at different rates:
+Breath pressure is calibrated and smoothed before being used to control amplitude. Frequency changes are also smoothed to reduce abrupt transitions.
 
-- **Control path:** key scanning, button debouncing and breath sensing
-- **Audio path:** continuous waveform generation at approximately **22.05 kHz**
+## Development
 
-Audio is generated with a phase accumulator and three harmonics:
+The main issues I ran into were sensor latency, audio stuttering and moisture reaching the pressure sensor. Adding the moisture trap increased reliable running time from roughly **10–15 minutes to over 60 minutes**.
 
-- fundamental: 1.00
-- second harmonic: 0.20
-- third harmonic: 0.05
+## Files
 
-Breath pressure controls the output amplitude after calibration, thresholding and smoothing. Frequency changes are also smoothed to avoid abrupt transitions.
-
-## Engineering challenges
-
-Several practical issues were found during development:
-
-- blocking pressure-sensor reads caused audible stuttering
-- the HX710B introduced latency and slow pressure decay
-- ESP32 DAC resolution introduced audible quantisation artefacts
-- condensation could saturate the breath sensor
-
-A custom airflow/moisture trap was designed to separate moisture from the pressure-sensing path. In testing, reliable continuous operation improved from approximately **10–15 minutes to more than 60 minutes**.
-
-## Repository structure
-
-- `src/final/FINALBreathButtonSound.ino` — original final integrated firmware
-- `src/development/11ButtonsNoBreath.ino` — original button/fingering and audio development sketch
-- `src/development/workingBreathandSound.ino` — original breath-control and audio development sketch
-- `hardware/3d/` — original Fusion 360 project files
+- `src/final/FINALBreathButtonSound.ino` — final Arduino sketch
+- `src/development/11ButtonsNoBreath.ino` — button/fingering development
+- `src/development/workingBreathandSound.ino` — breath-control development
+- `hardware/3d/` — Fusion 360 files
 - `docs/images/` — prototype and CAD images
 
-The firmware and CAD files are the original project files retained from the 2026 project archive.
-
-## Build notes
-
 Development environment: **Arduino IDE (ESP32)**
-
-The final firmware uses the ESP32 internal DAC and direct GPIO reads. Pin assignments are defined at the top of the sketch.
-
-## Key results
-
-- real-time embedded audio generation
-- 11 mapped inputs
-- implemented note range approximately C3–C5 with modifiers
-- responsive key control with no noticeable user-perceived delay
-- stable audio under normal operation with minor artefacts
-- >60 minutes continuous operation after moisture-management redesign
